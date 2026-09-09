@@ -95,12 +95,12 @@ Pre-built standalone binaries are published for every release on [GitHub Release
 
 ### Quick Install (Linux, macOS, Termux)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sapirrior/gitget/main/installer/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/sapirrior/gitget/main/installer/install.sh -o /tmp/install-gitget.sh && bash /tmp/install-gitget.sh && rm -f /tmp/install-gitget.sh
 ```
 
 ### Quick Install (Windows PowerShell)
 ```powershell
-irm https://raw.githubusercontent.com/sapirrior/gitget/main/installer/install.ps1 | iex
+Invoke-WebRequest https://raw.githubusercontent.com/sapirrior/gitget/main/installer/install.ps1 -OutFile "$env:TEMP\install-gitget.ps1"; & "$env:TEMP\install-gitget.ps1"; Remove-Item "$env:TEMP\install-gitget.ps1" -Force
 ```
 
 ### Build from Source
