@@ -79,7 +79,7 @@ jobs:
         shell: msys2 {0}
         run: |
           make clean
-          make CXX=clang++ TARGET=gitget.exe LDFLAGS="$(curl-config --libs) -static"
+          make CXX=clang++ TARGET=gitget.exe CURL_LIBS="$(curl-config --libs)"
           mv gitget.exe gitget-windows-amd64.exe
 
       - name: Upload artifact
