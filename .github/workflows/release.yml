@@ -10,60 +10,100 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux x86_64 (AMD64)
-          - os: ubuntu-latest
-            target: linux-amd64
-            artifact_name: gitget-linux-amd64
-            binary_name: gitget
-            setup: |
-              sudo apt-get update
-              sudo apt-get install -y clang libcurl4-openssl-dev make
-            build_cmd: |
-              make clean
-              make CXX=clang++
-              mv gitget gitget-linux-amd64
+  build-linux-amd64:
+    name: Build (linux-amd64 static)
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:latest
+    steps:
+      - name: Install build tools & static libraries
+        run: |
+          apk update
+          apk add --no-cache \
+            build-base \
+            clang \
+            make \
+            git \
+            curl-dev \
+            curl-static \
+            openssl-libs-static \
+            nghttp2-static \
+            brotli-static \
+            zlib-static \
+            zstd-static \
+            pkgconf
 
-          # Linux ARM64 (Native GitHub ARM64 Runner - Termux / Android / Pi)
-          - os: ubuntu-24.04-arm
-            target: linux-arm64
-            artifact_name: gitget-linux-arm64
-            binary_name: gitget
-            setup: |
-              sudo apt-get update
-              sudo apt-get install -y clang libcurl4-openssl-dev make
-            build_cmd: |
-              make clean
-              make CXX=clang++
-              mv gitget gitget-linux-arm64
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-          # Windows x86_64 (MSYS2 MinGW-w64)
-          - os: windows-latest
-            target: windows-amd64
-            artifact_name: gitget-windows-amd64.exe
-            binary_name: gitget.exe
-            use_msys: true
+      - name: Build static binary
+        run: |
+          make clean
+          make CXX=clang++ \
+               CURL_CFLAGS="$(pkg-config --static --cflags libcurl)" \
+               LDFLAGS="-static $(pkg-config --static --libs libcurl)"
+          strip gitget
+          mv gitget gitget-linux-amd64
+          file gitget-linux-amd64
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitget-linux-amd64
+          path: gitget-linux-amd64
+          if-no-files-found: error
+
+  build-linux-arm64:
+    name: Build (linux-arm64 static)
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: alpine:latest
+    steps:
+      - name: Install build tools & static libraries
+        run: |
+          apk update
+          apk add --no-cache \
+            build-base \
+            clang \
+            make \
+            git \
+            curl-dev \
+            curl-static \
+            openssl-libs-static \
+            nghttp2-static \
+            brotli-static \
+            zlib-static \
+            zstd-static \
+            pkgconf
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build static binary
+        run: |
+          make clean
+          make CXX=clang++ \
+               CURL_CFLAGS="$(pkg-config --static --cflags libcurl)" \
+               LDFLAGS="-static $(pkg-config --static --libs libcurl)"
+          strip gitget
+          mv gitget gitget-linux-arm64
+          file gitget-linux-arm64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitget-linux-arm64
+          path: gitget-linux-arm64
+          if-no-files-found: error
+
+  build-windows-amd64:
+    name: Build (windows-amd64 static)
+    runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup environment (Linux)
-        if: ${{ !matrix.use_msys }}
-        run: ${{ matrix.setup }}
-
-      - name: Build binary (Linux with Clang)
-        if: ${{ !matrix.use_msys }}
-        run: ${{ matrix.build_cmd }}
-
-      - name: Setup MSYS2 (Windows)
-        if: matrix.use_msys
+      - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
@@ -73,25 +113,29 @@ jobs:
             mingw-w64-x86_64-clang
             mingw-w64-x86_64-curl
             make
+            pkgconf
 
-      - name: Build binary (Windows with Clang)
-        if: matrix.use_msys
+      - name: Build static Windows binary
         shell: msys2 {0}
         run: |
           make clean
-          make CXX=clang++ TARGET=gitget.exe CURL_LIBS="$(curl-config --libs)"
+          make CXX=clang++ \
+               TARGET=gitget.exe \
+               CXXFLAGS="-std=c++20 -O2 -Iinclude -DCURL_STATICLIB" \
+               LDFLAGS="-static $(curl-config --static-libs)"
+          strip gitget.exe
           mv gitget.exe gitget-windows-amd64.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_name }}
+          name: gitget-windows-amd64.exe
+          path: gitget-windows-amd64.exe
           if-no-files-found: error
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [build-linux-amd64, build-linux-arm64, build-windows-amd64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
