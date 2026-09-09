@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,72 +24,41 @@ jobs:
             binary_name: gitget
             setup: |
               sudo apt-get update
-              sudo apt-get install -y libcurl4-openssl-dev build-essential
+              sudo apt-get install -y clang libcurl4-openssl-dev make
             build_cmd: |
               make clean
-              make
+              make CXX=clang++
               mv gitget gitget-linux-amd64
 
-          # Linux ARM64 / Termux (aarch64 cross-compile)
-          - os: ubuntu-latest
+          # Linux ARM64 (Native GitHub ARM64 Runner - Termux / Android / Pi)
+          - os: ubuntu-24.04-arm
             target: linux-arm64
             artifact_name: gitget-linux-arm64
             binary_name: gitget
             setup: |
-              sudo dpkg --add-architecture arm64
               sudo apt-get update
-              sudo apt-get install -y g++-aarch64-linux-gnu binutils-aarch64-linux-gnu libcurl4-openssl-dev:arm64
+              sudo apt-get install -y clang libcurl4-openssl-dev make
             build_cmd: |
               make clean
-              make CXX=aarch64-linux-gnu-g++ \
-                   CURL_CFLAGS="$(pkg-config --cflags libcurl-arm64 2>/dev/null || aarch64-linux-gnu-pkg-config --cflags libcurl 2>/dev/null || echo '-I/usr/include/aarch64-linux-gnu')" \
-                   CURL_LIBS="-lcurl"
+              make CXX=clang++
               mv gitget gitget-linux-arm64
-
-          # macOS ARM64 (Apple Silicon)
-          - os: macos-14
-            target: macos-arm64
-            artifact_name: gitget-macos-arm64
-            binary_name: gitget
-            setup: |
-              brew install curl
-            build_cmd: |
-              make clean
-              CURL_PREFIX=$(brew --prefix curl)
-              make CURL_CFLAGS="-I$CURL_PREFIX/include" CURL_LIBS="-L$CURL_PREFIX/lib -lcurl"
-              mv gitget gitget-macos-arm64
-
-          # macOS x86_64 (Intel)
-          - os: macos-13
-            target: macos-amd64
-            artifact_name: gitget-macos-amd64
-            binary_name: gitget
-            setup: |
-              brew install curl
-            build_cmd: |
-              make clean
-              CURL_PREFIX=$(brew --prefix curl)
-              make CURL_CFLAGS="-I$CURL_PREFIX/include" CURL_LIBS="-L$CURL_PREFIX/lib -lcurl"
-              mv gitget gitget-macos-amd64
 
           # Windows x86_64 (MSYS2 MinGW-w64)
           - os: windows-latest
             target: windows-amd64
             artifact_name: gitget-windows-amd64.exe
             binary_name: gitget.exe
-            setup: |
-              echo "MSYS2 environment configured"
             use_msys: true
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup environment (Unix)
+      - name: Setup environment (Linux)
         if: ${{ !matrix.use_msys }}
         run: ${{ matrix.setup }}
 
-      - name: Build binary (Unix)
+      - name: Build binary (Linux with Clang)
         if: ${{ !matrix.use_msys }}
         run: ${{ matrix.build_cmd }}
 
@@ -100,15 +70,16 @@ jobs:
           update: true
           install: >-
             base-devel
-            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-clang
             mingw-w64-x86_64-curl
+            make
 
-      - name: Build binary (Windows)
+      - name: Build binary (Windows with Clang)
         if: matrix.use_msys
         shell: msys2 {0}
         run: |
           make clean
-          make TARGET=gitget.exe LDFLAGS="$(curl-config --libs) -static-libgcc -static-libstdc++"
+          make CXX=clang++ TARGET=gitget.exe LDFLAGS="$(curl-config --libs) -static"
           mv gitget.exe gitget-windows-amd64.exe
 
       - name: Upload artifact
@@ -135,7 +106,7 @@ jobs:
       - name: Generate SHA256 Checksums
         run: |
           cd dist
-          chmod +x gitget-linux-* gitget-macos-* 2>/dev/null || true
+          chmod +x gitget-linux-* 2>/dev/null || true
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
