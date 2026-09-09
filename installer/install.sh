@@ -12,9 +12,12 @@ YELLOW="\033[0;33m"
 RED="\033[0;31m"
 RESET="\033[0m"
 
-echo -e "${BOLD}${BLUE}=== gitget Universal Installer ===${RESET}\n"
+# 1. Detect OS & Environment
+IS_TERMUX=false
+if [ -n "${TERMUX_VERSION:-}" ] || [ -d "/data/data/com.termux" ]; then
+    IS_TERMUX=true
+fi
 
-# 1. Detect OS
 OS="$(uname -s)"
 case "${OS}" in
     Linux*)
@@ -90,16 +93,29 @@ echo -e "${GREEN}✓ Download complete!${RESET}\n"
 
 # 5. Prompt installation destination
 echo -e "${BOLD}Where would you like to install gitget?${RESET}"
-echo "  1) System-wide in /usr/local/bin (requires sudo)"
-echo "  2) User local in \$HOME/.local/bin"
-echo "  3) Current directory ($(pwd)) as '${BINARY_NAME}'"
-echo "  4) Custom directory"
-read -r -p "Select an option [1-4] (default: 2): " DEST_CHOICE
-DEST_CHOICE="${DEST_CHOICE:-2}"
+if [ "${IS_TERMUX}" = true ]; then
+    echo "  1) Termux bin in ${PREFIX:-/data/data/com.termux/files/usr}/bin (recommended)"
+    echo "  2) User local in \$HOME/.local/bin"
+    echo "  3) Current directory ($(pwd)) as '${BINARY_NAME}'"
+    echo "  4) Custom directory"
+    read -r -p "Select an option [1-4] (default: 1): " DEST_CHOICE
+    DEST_CHOICE="${DEST_CHOICE:-1}"
+else
+    echo "  1) System-wide in /usr/local/bin (requires sudo)"
+    echo "  2) User local in \$HOME/.local/bin"
+    echo "  3) Current directory ($(pwd)) as '${BINARY_NAME}'"
+    echo "  4) Custom directory"
+    read -r -p "Select an option [1-4] (default: 2): " DEST_CHOICE
+    DEST_CHOICE="${DEST_CHOICE:-2}"
+fi
 
 case "${DEST_CHOICE}" in
     1)
-        TARGET_DIR="/usr/local/bin"
+        if [ "${IS_TERMUX}" = true ]; then
+            TARGET_DIR="${PREFIX:-/data/data/com.termux/files/usr}/bin"
+        else
+            TARGET_DIR="/usr/local/bin"
+        fi
         ;;
     2)
         TARGET_DIR="${HOME}/.local/bin"
@@ -112,8 +128,11 @@ case "${DEST_CHOICE}" in
         TARGET_DIR="${CUSTOM_DIR}"
         ;;
     *)
-        echo "Invalid selection. Defaulting to ${HOME}/.local/bin."
-        TARGET_DIR="${HOME}/.local/bin"
+        if [ "${IS_TERMUX}" = true ]; then
+            TARGET_DIR="${PREFIX:-/data/data/com.termux/files/usr}/bin"
+        else
+            TARGET_DIR="${HOME}/.local/bin"
+        fi
         ;;
 esac
 
@@ -127,15 +146,21 @@ if [[ ! "${CONFIRM_INSTALL}" =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
-mkdir -p "${TARGET_DIR}" 2>/dev/null || sudo mkdir -p "${TARGET_DIR}"
-
-if [ -w "${TARGET_DIR}" ]; then
+if [ "${IS_TERMUX}" = true ]; then
+    mkdir -p "${TARGET_DIR}"
     cp "${TMP_FILE}" "${TARGET_PATH}"
     chmod +x "${TARGET_PATH}"
 else
-    echo -e "${YELLOW}Permission required to write to ${TARGET_DIR}. Requesting sudo...${RESET}"
-    sudo cp "${TMP_FILE}" "${TARGET_PATH}"
-    sudo chmod +x "${TARGET_PATH}"
+    mkdir -p "${TARGET_DIR}" 2>/dev/null || sudo mkdir -p "${TARGET_DIR}"
+
+    if [ -w "${TARGET_DIR}" ]; then
+        cp "${TMP_FILE}" "${TARGET_PATH}"
+        chmod +x "${TARGET_PATH}"
+    else
+        echo -e "${YELLOW}Permission required to write to ${TARGET_DIR}. Requesting sudo...${RESET}"
+        sudo cp "${TMP_FILE}" "${TARGET_PATH}"
+        sudo chmod +x "${TARGET_PATH}"
+    fi
 fi
 
 echo -e "\n${GREEN}✓ Binary successfully installed to: ${TARGET_PATH}${RESET}"
