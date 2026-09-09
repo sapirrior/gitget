@@ -7,8 +7,8 @@ build/
 *.a
 
 # Binaries
-gitget
-gitget.exe
+./gitget
+./gitget.exe
 
 # IDE / Editor files
 .vscode/
