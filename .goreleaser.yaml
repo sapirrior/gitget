@@ -1,0 +1,50 @@
+version: 2
+
+project_name: gitget
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: gitget
+    main: ./cmd/gitget
+    binary: gitget
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: default
+    format: binary
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
+checksum:
+  name_template: "SHA256SUMS.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: sapirrior
+    name: gitget
+  draft: false
+  prerelease: false
+  mode: replace

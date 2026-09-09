@@ -103,15 +103,16 @@ curl -fsSL https://raw.githubusercontent.com/sapirrior/gitget/main/installer/ins
 Invoke-WebRequest https://raw.githubusercontent.com/sapirrior/gitget/main/installer/install.ps1 -OutFile install.ps1; & .\install.ps1; Remove-Item install.ps1 -Force
 ```
 
-### Build from Source
+### Build from Source (Go)
 ```bash
 git clone https://github.com/sapirrior/gitget.git
 cd gitget
-make
-sudo make install
+go build -ldflags="-s -w" ./cmd/gitget
 ```
-
-> **Requirements for building:** Any modern C++ compiler (`g++` or `clang++`), `make`, and `libcurl`.
+Or directly via `go install`:
+```bash
+go install github.com/sapirrior/gitget/cmd/gitget@latest
+```
 
 ---
 

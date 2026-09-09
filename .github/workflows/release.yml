@@ -10,157 +10,25 @@ permissions:
   contents: write
 
 jobs:
-  build-linux-amd64:
-    name: Build (linux-amd64 static)
-    runs-on: ubuntu-latest
-    container:
-      image: alpine:latest
-    steps:
-      - name: Install build tools & static libraries
-        run: |
-          apk update
-          apk add --no-cache \
-            build-base \
-            clang \
-            make \
-            git \
-            curl-dev \
-            curl-static \
-            openssl-libs-static \
-            nghttp2-static \
-            brotli-static \
-            zlib-static \
-            zstd-static \
-            pkgconf
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Build static binary
-        run: |
-          make clean
-          make CXX=clang++ \
-               CURL_CFLAGS="$(pkg-config --static --cflags libcurl)" \
-               LDFLAGS="-static $(pkg-config --static --libs libcurl)"
-          strip gitget
-          mv gitget gitget-linux-amd64
-          file gitget-linux-amd64
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitget-linux-amd64
-          path: gitget-linux-amd64
-          if-no-files-found: error
-
-  build-linux-arm64:
-    name: Build (linux-arm64 static)
-    runs-on: ubuntu-24.04-arm
-    container:
-      image: alpine:latest
-    steps:
-      - name: Install build tools & static libraries
-        run: |
-          apk update
-          apk add --no-cache \
-            build-base \
-            clang \
-            make \
-            git \
-            curl-dev \
-            curl-static \
-            openssl-libs-static \
-            nghttp2-static \
-            brotli-static \
-            zlib-static \
-            zstd-static \
-            pkgconf
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Build static binary
-        run: |
-          make clean
-          make CXX=clang++ \
-               CURL_CFLAGS="$(pkg-config --static --cflags libcurl)" \
-               LDFLAGS="-static $(pkg-config --static --libs libcurl)"
-          strip gitget
-          mv gitget gitget-linux-arm64
-          file gitget-linux-arm64
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitget-linux-arm64
-          path: gitget-linux-arm64
-          if-no-files-found: error
-
-  build-windows-amd64:
-    name: Build (windows-amd64 static)
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            base-devel
-            mingw-w64-x86_64-clang
-            mingw-w64-x86_64-curl
-            make
-            pkgconf
-
-      - name: Build static Windows binary
-        shell: msys2 {0}
-        run: |
-          make clean
-          make CXX=clang++ \
-               TARGET=gitget.exe \
-               CXXFLAGS="-std=c++20 -O2 -Iinclude -DCURL_STATICLIB" \
-               LDFLAGS="-static $(curl-config --static-libs)"
-          strip gitget.exe
-          mv gitget.exe gitget-windows-amd64.exe
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitget-windows-amd64.exe
-          path: gitget-windows-amd64.exe
-          if-no-files-found: error
-
-  release:
-    name: Publish GitHub Release
-    needs: [build-linux-amd64, build-linux-arm64, build-windows-amd64]
+  goreleaser:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
         with:
-          path: dist
-          merge-multiple: true
+          fetch-depth: 0
 
-      - name: Generate SHA256 Checksums
-        run: |
-          cd dist
-          chmod +x gitget-linux-* 2>/dev/null || true
-          sha256sum * > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          files: |
-            dist/*
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+          go-version: '1.24'
+          check-latest: true
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
