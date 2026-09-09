@@ -24,7 +24,7 @@ case "${OS}" in
         OS_TYPE="linux"
         ;;
     Darwin*)
-        OS_TYPE="macos"
+        OS_TYPE="darwin"
         ;;
     MSYS*|MINGW*|CYGWIN*)
         OS_TYPE="windows"
