@@ -6,7 +6,7 @@
 
 [![Release](https://img.shields.io/github/v/release/sapirrior/gitget?style=flat-square&color=blue)](https://github.com/sapirrior/gitget/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Termux-blueviolet?style=flat-square)](https://github.com/sapirrior/gitget/releases)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20Termux-blueviolet?style=flat-square)](https://github.com/sapirrior/gitget/releases)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=flat-square)](https://github.com/sapirrior/gitget/actions)
 
 <p align="center">
@@ -38,7 +38,7 @@
 - **🔐 Frictionless Authentication**  
   Effortlessly download from private corporate repos using your existing environment tokens (`GITHUB_TOKEN`, `GITLAB_TOKEN`, etc.) or the `-t` flag.
 - **💻 Lightweight & Native Everywhere**  
-  Single binary with zero runtime dependencies. Runs natively on Linux (AMD64 & ARM64/Termux), macOS (Apple Silicon & Intel), and Windows.
+  Single binary with zero runtime dependencies. Runs natively on Linux (AMD64 & ARM64/Termux) and Windows.
 - **🛠️ Pipeline Ready**  
   Designed for developer scripts, Dockerfiles, dev containers, and CI/CD pipelines where speed and minimal footprint matter.
 
@@ -93,7 +93,7 @@ gitget -r torvalds/linux -p Makefile -b master -o kernel.mk
 
 Pre-built standalone binaries are published for every release on [GitHub Releases](https://github.com/sapirrior/gitget/releases).
 
-### Quick Install (Linux, macOS, Termux)
+### Quick Install (Linux, Termux)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sapirrior/gitget/main/installer/install.sh -o install.sh && bash install.sh && rm -f install.sh
 ```
