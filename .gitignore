@@ -1,0 +1,22 @@
+# Build artifacts
+build/
+*.o
+*.obj
+*.so
+*.dylib
+*.a
+
+# Binaries
+gitget
+gitget.exe
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary and log files
+*.log
+/tmp/
